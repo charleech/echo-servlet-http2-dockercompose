@@ -1,0 +1,69 @@
+version: '3'
+
+networks:
+  default:
+    external:
+      name: servlet-tier
+
+services:
+
+  traefik:
+    image: docker.summitthai.com:61443/traefik:2.4
+    restart: always
+    ports:
+      - "61543:61543" # SSL
+      - "61544:61544" # Traefik ping
+      - "61545:61545" # Traefik dashboard
+      - "61546:61546" # Traefik metrics
+    environment:
+      - TZ=Asia/Bangkok
+    dns:
+      - 172.20.0.1
+      - 172.17.1.1
+      - 172.17.2.48
+      - 8.8.8.8
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/config/traefik.yml:/traefik.yml
+      - ./traefik/dynamic-config:/opt/dynamic-config
+
+  payara:
+    image: payara/micro:latest
+    restart: always
+    ports:
+      - "61553:8443"
+    environment:
+      TZ: Asia/Bangkok
+    volumes:
+      - ./payara:/opt/payara/conf
+      - ./webapp/echo-servlet-1.0.0-SNAPSHOT.war:/opt/payara/deployments/echo-servlet.war 
+    command:
+      - --prebootcommandfile
+      - '/opt/payara/conf/pre-boot'
+      - --postbootcommandfile
+      - '/opt/payara/conf/post-boot'
+      - --port
+      - '8080'
+      - --sslPort
+      - '8443'
+      - --deploymentDir
+      - /opt/payara/deployments
+    labels:    
+      - "traefik.enable=true"
+      - "traefik.docker.network=servlet-tier"
+      - "traefik.http.routers.payara.rule=(Host(`myserver`) && PathPrefix(`/payara`))"
+      - "traefik.http.routers.payara.entrypoints=websecure"
+      - "traefik.http.routers.payara.middlewares=default-middleware@file,payara-replace-path-regex,payara-redirect-regex"
+      - "traefik.http.services.payara.loadbalancer.server.port=8443"
+      - "traefik.http.services.payara.loadbalancer.server.scheme=https"
+      # If comment all health check here, it work fine.
+      # If not the request with big header will be failed
+      - "traefik.http.services.payara.loadbalancer.healthCheck.path=/echo"
+      - "traefik.http.services.payara.loadbalancer.healthCheck.port=8443"
+      - "traefik.http.services.payara.loadbalancer.healthCheck.scheme=https"
+      - "traefik.http.services.payara.loadbalancer.healthCheck.interval=10s"
+      - "traefik.http.services.payara.loadbalancer.healthCheck.timeout=3s"
+      - "traefik.http.middlewares.payara-replace-path-regex.replacepathregex.regex=^/payara/(.*)"
+      - "traefik.http.middlewares.payara-replace-path-regex.replacepathregex.replacement=/$${1}"
+      - "traefik.http.middlewares.payara-redirect-regex.redirectregex.regex=^(.*)/payara$$"
+      - "traefik.http.middlewares.payara-redirect-regex.redirectregex.replacement=$${1}/payara/"

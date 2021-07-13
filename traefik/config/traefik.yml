@@ -1,0 +1,67 @@
+# Static configuration
+
+# Writing Logs to a File, in JSON
+log:
+  level: DEBUG
+  filePath: "/var/log/traefik/traefik.log"
+  format: common
+  
+# Configuring a buffer of 100 lines
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  bufferingSize: 100
+  format: json
+
+serversTransport:
+  insecureSkipVerify: true
+
+entryPoints:
+  web:
+    address: ":61580"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: ":61543"
+    http:
+      tls:
+        options: default
+    forwardedHeaders:
+      insecure: true
+  ping:
+    address: ":61544"
+  dashboard-secure:
+    address: ":61545"
+  metrics:
+    address: ":61546"
+
+ping:
+  entryPoint: "ping"
+
+api:
+  dashboard: true
+
+metrics:
+  prometheus:
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addServicesLabels: true
+
+providers:
+  file:
+    # Defines the path to the directory that contains the configuration files.
+    directory: "/opt/dynamic-config"
+    #  Set the watch option to true to allow Traefik to automatically watch for file changes.
+    watch: true
+  docker: 
+    exposedByDefault: false
+    network: "payara-tier"
+

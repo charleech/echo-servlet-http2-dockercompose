@@ -1,0 +1,304 @@
+= echo-servlet-http2-dockercompose
+
+This is a project which provide the evaluating Jakarta EE Servlet and HTTP/2 as
+a Docker.
+
+[IMPORTANT]
+.The web application
+====
+The web application at `./webapp/echo-servlet-1.0.0-SNAPSHOT.war` is a build
+product from my *GitHub* repository at 
+https://github.com/charleech/echo-servlet[charleech/echo-servlet].
+
+It is a simple *Jakarta EE Servlet* which return the request information back
+as a response in an echoing style.
+====
+
+== Docker Compose
+
+[source, bash, linenums]
+.To create docker network
+----
+sudo docker network create servlet-tier --driver bridge
+
+# To inspect
+#
+# sudo docker network inspect servlet-tier
+----
+
+[source, bash, linenums]
+.To start/stop
+----
+docker-compose up -d
+
+docker-compose down
+----
+
+== How to test
+
+=== Traefik version
+
+[source, bash, linenums]
+.Get Traefik Version
+----
+curl -v -k \
+-H "Host: myserver" \
+"https://localhost:61545/api/version"
+
+curl -v -k \
+-H "Host: myserver" \
+"http://localhost:61544/ping"
+
+curl -v -k \
+-H "Host: myserver" \
+"http://localhost:61546/metrics"
+
+curl -v -k \
+-H "Host: myserver" \
+"https://localhost:61545/dashboard/"
+----
+
+=== Generate header files
+
+[source, bash, linenums]
+.Test with 1KB header
+----
+echo -n "my-header-01: " > /tmp/header1k.txt \
+  && printf 'A%0.s' {1..1000} \
+  >> /tmp/header1k.txt \
+  && echo "" >> /tmp/header1k.txt
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header1k.txt \
+"https://localhost:61543/payara/echo?a=b&x=y"
+----
+
+[source, bash, linenums]
+.Test with 3KB header
+----
+rm /tmp/header3k.txt
+
+for i in $(seq -w 1 3); do 
+    echo -n "my-header-$i: " >> /tmp/header3k.txt \
+    && printf 'A%0.s' {1..1000} >> /tmp/header3k.txt \
+    && echo "" >> /tmp/header3k.txt
+done
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header3k.txt \
+"https://localhost:61543/payara/echo?a=b&x=y"
+----
+
+[source, bash, linenums]
+.Test with 4KB header
+----
+rm /tmp/header4k.txt
+
+for i in $(seq -w 1 4); do 
+    echo -n "my-header-$i: " >> /tmp/header4k.txt \
+    && printf 'A%0.s' {1..1000} >> /tmp/header4k.txt \
+    && echo "" >> /tmp/header4k.txt
+done
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header4k.txt \
+"https://localhost:61543/payara/echo?a=b&x=y"
+----
+
+[source, bash, linenums]
+.Test with 10KB header
+----
+rm /tmp/header10k.txt
+
+for i in $(seq -w 1 10); do 
+    echo -n "my-header-$i: " >> /tmp/header10k.txt \
+    && printf 'A%0.s' {1..1000} >> /tmp/header10k.txt \
+    && echo "" >> /tmp/header10k.txt
+done
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header10k.txt \
+"https://localhost:61543/payara/echo?a=b&x=y"
+----
+
+== Issue
+
+[.lead]
+There is an issue about the integration between *Traefik* version `2.4.9` and 
+*Payara Micro* version `5.2021.4` as the following scenario: -
+
+=== When Enable Traefik Health Check
+
+Regarding to this project link:./docker-compose.yml[docker-compose.xml] if we
+enable the *Traefik* health check for *Payara* service as the following example.
+
+[source, yaml, linenums]
+----
+  payara:
+    image: payara/micro:latest
+    labels:
+      - "traefik.http.services.payara.loadbalancer.healthCheck.path=/echo"
+      - "traefik.http.services.payara.loadbalancer.healthCheck.port=8443"
+      - "traefik.http.services.payara.loadbalancer.healthCheck.scheme=https"
+      - "traefik.http.services.payara.loadbalancer.healthCheck.interval=10s"
+      - "traefik.http.services.payara.loadbalancer.healthCheck.timeout=3s"
+----
+
+When perform testing with header size `4KB` and above the response is failure.
+(`1KB` and `3KB` work fine).
+
+[source, bash, linenums]
+.Test with header size 4KB
+----
+rm /tmp/header4k.txt
+
+for i in $(seq -w 1 4); do 
+    echo -n "my-header-$i: " >> /tmp/header4k.txt \
+    && printf 'A%0.s' {1..1000} >> /tmp/header4k.txt \
+    && echo "" >> /tmp/header4k.txt
+done
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header4k.txt \
+"https://localhost:61543/payara/echo?a=b&x=y"
+
+# curl response
+* Connection state changed (MAX_CONCURRENT_STREAMS == 250)!
+< HTTP/2 500
+< content-type: text/plain; charset=utf-8
+< content-length: 21
+< date: Tue, 13 Jul 2021 07:39:07 GMT
+
+#
+# in container traefik log
+#
+# docker-compose exec traefik /bin/sh
+# tail -f /var/log/traefik/traefik.log
+#
+#
+time="2021-07-13T14:39:07+07:00" level=debug 
+    msg="Serving default certificate for request: \"localhost\""
+
+time="2021-07-13T14:39:07+07:00" level=warning 
+    msg="Tried to extract a certificate on a request without mutual TLS" ...
+time="2021-07-13T14:39:07+07:00" level=debug 
+    msg="vulcand/oxy/roundrobin/rr: begin ServeHttp on request" Request="..."
+time="2021-07-13T14:39:07+07:00" level=debug 
+    msg="vulcand/oxy/roundrobin/rr: Forwarding this request to URL" ...."
+
+time="2021-07-13T14:39:07+07:00" level=debug 
+    msg="'500 Internal Server Error' caused by: http2: server sent GOAWAY and 
+    closed the connection; 
+    LastStreamID=11, 
+    ErrCode=COMPRESSION_ERROR, 
+    debug=\"\""
+
+time="2021-07-13T14:39:07+07:00" level=debug 
+    msg="vulcand/oxy/roundrobin/rr: 
+    completed ServeHttp on request" Request="..."
+----
+
+=== When Disable Traefik Health Check
+
+[.lead]
+If we comment the *Traefik* health check for *Payara* service as the following 
+example.
+
+[source, yaml, linenums]
+----
+  payara:
+    image: payara/micro:latest
+    labels:
+      #- "traefik.http.services.payara.loadbalancer.healthCheck.path=/echo"
+      #- "traefik.http.services.payara.loadbalancer.healthCheck.port=8443"
+      #- "traefik.http.services.payara.loadbalancer.healthCheck.scheme=https"
+      #- "traefik.http.services.payara.loadbalancer.healthCheck.interval=10s"
+      #- "traefik.http.services.payara.loadbalancer.healthCheck.timeout=3s"
+----
+
+When perform testing with header size `4KB` and `10KB` the response is success !
+
+[source, bash, linenums]
+.Test with 4KB header
+----
+rm /tmp/header4k.txt
+
+for i in $(seq -w 1 4); do 
+    echo -n "my-header-$i: " >> /tmp/header4k.txt \
+    && printf 'A%0.s' {1..1000} >> /tmp/header4k.txt \
+    && echo "" >> /tmp/header4k.txt
+done
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header4k.txt \
+"https://localhost:61543/payara/echo?a=b&x=y"
+----
+
+[source, bash, linenums]
+.Test with 10KB header
+----
+rm /tmp/header10k.txt
+
+for i in $(seq -w 1 10); do 
+    echo -n "my-header-$i: " >> /tmp/header10k.txt \
+    && printf 'A%0.s' {1..1000} >> /tmp/header10k.txt \
+    && echo "" >> /tmp/header10k.txt
+done
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header10k.txt \
+"https://localhost:61543/payara/echo?a=b&x=y"
+----
+
+=== Access to Payara Directly
+
+[.lead]
+If we access to the *Payara* service directly as the following example.
+
+[source, bash, linenums]
+.Test with 4KB header
+----
+rm /tmp/header4k.txt
+
+for i in $(seq -w 1 4); do 
+    echo -n "my-header-$i: " >> /tmp/header4k.txt \
+    && printf 'A%0.s' {1..1000} >> /tmp/header4k.txt \
+    && echo "" >> /tmp/header4k.txt
+done
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header4k.txt \
+"https://localhost:61553/echo?a=b&x=y"
+----
+
+[source, bash, linenums]
+.Test with 10KB header
+----
+rm /tmp/header10k.txt
+
+for i in $(seq -w 1 10); do 
+    echo -n "my-header-$i: " >> /tmp/header10k.txt \
+    && printf 'A%0.s' {1..1000} >> /tmp/header10k.txt \
+    && echo "" >> /tmp/header10k.txt
+done
+  
+curl -v -k \
+-H "Host: myserver" \
+-H @/tmp/header10k.txt \
+"https://localhost:61553/echo?a=b&x=y"
+----
+
+When perform testing with header size `4KB` and `10KB` the response is success !
+
+=== Next Step
+
+I will try to post a question to the *Traefik* _community_ and will update this
+`README` later.
