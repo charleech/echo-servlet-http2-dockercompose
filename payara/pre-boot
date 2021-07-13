@@ -1,0 +1,4 @@
+set configs.config.server-config.network-config.protocols.protocol.https-listener.http.http2-enabled=true
+set configs.config.server-config.network-config.protocols.protocol.https-listener.http.http2-max-header-list-size-in-bytes=102400
+
+set configs.config.server-config.network-config.protocols.protocol.https-listener.http.xpowered-by=true

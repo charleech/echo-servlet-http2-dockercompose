@@ -1,0 +1,18 @@
+# Dynamic configuration
+
+http:
+  routers:
+    dashboard:
+      rule: Host(`myserver`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+      service: api@internal
+      entryPoints:
+        - dashboard-secure
+      middlewares:
+        - dashboard-middleware
+      tls:
+        options: default
+  middlewares:
+    dashboard-middleware:
+      redirectRegex:
+        regex: "^(.*)/dashboard$$"
+        replacement: "${1}/dashboard/"

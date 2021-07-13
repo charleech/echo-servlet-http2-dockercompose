@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>app.github.charleech</groupId>    
+    <artifactId>echo-servlet-http2-dockercompose</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <packaging>pom</packaging>
+
+    <name>echo-servlet-http2-dockercompose</name>
+
+    <url>${my.project.url}</url>
+   
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <my.project.description>
+            This is a project which provide the demonstration for printing the request
+        </my.project.description>
+        <my.project.inception.year>2021</my.project.inception.year>
+        <my.project.url>https://github.com/charleech/echo-servlet-http2-dockercompose</my.project.url>
+        <my.project.git.url>https://github.com/charleech/echo-servlet-http2-dockercompose</my.project.git.url>
+    </properties>
+
+    <description>${my.project.description}</description>
+
+    <inceptionYear>${my.project.inception.year}</inceptionYear>
+
+    <repositories>
+        <repository>
+            <id>maven-central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>https://github.com/charleech/echo-servlet-http2-dockercompose/blob/main/LICENSE</url>
+            <distribution>repo</distribution>
+            <comments>Echo Servlet</comments>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>
+            scm:git:${my.project.git.url}
+        </connection>
+        <developerConnection>
+            scm:git:${my.project.git.url}
+        </developerConnection>
+        <url>${my.project.gitlab.url}</url>
+    </scm>
+    
+    <developers>
+        <developer>
+            <id>charlee.ch</id>
+            <name>Charlee Chitsuk</name>
+            <email>charlee.ch@gmail.com</email>
+            <url>http://th.gravatar.com/charleech</url>
+            <timezone>+7</timezone>
+            <properties>
+                <picUrl>http://th.gravatar.com/charleech</picUrl>
+            </properties>
+        </developer>
+    </developers>
+</project>

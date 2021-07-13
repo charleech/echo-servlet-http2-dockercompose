@@ -1,0 +1,11 @@
+# Dynamic configuration
+
+http:
+  middlewares:
+    default-middleware:
+      chain:
+        middlewares:
+          - default-pass-client-cert
+    default-pass-client-cert:
+      passTLSClientCert:
+        pem: true
